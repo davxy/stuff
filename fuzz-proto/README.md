@@ -83,13 +83,13 @@ State ::= SEQUENCE OF KeyValue
 ImportBlock ::= Block
 
 SetState ::= SEQUENCE {
-    -- Header to eventually reference state.
-    -- Can be though as the genesis header.
     header  Header,
     state   State
 }
 
 GetState ::= HeaderHash
+
+StateRoot ::= StateRootHash
 
 Message ::= CHOICE {
     peer-info    [0] PeerInfo,
@@ -97,21 +97,26 @@ Message ::= CHOICE {
     set-state    [2] SetState,
     get-state    [3] GetState,
     state        [4] State,
-    state-root   [5] StateRootHash,
+    state-root   [5] StateRoot
 }
 ```
 
+**Note**: The `Header` included in the `SetState` message is eventually
+used - via its hash - to reference the associated state. It is conceptually
+similar to the genesis header: like the genesis header, its contents do not
+fully determine the state. In other words, the state must be accepted and
+stored exactly as provided, regardless of the header's content.
+
 #### Messages Codec
 
-All messages are encoded using the JAM codec format. Prior to transmission,
-each encoded message is prefixed with its length, represented as a 32-bit
-little-endian integer.
+All messages are encoded according to the **JAM codec** format. Prior to
+transmission, each encoded message is prefixed with its length, represented as a
+32-bit little-endian integer.
 
-##### Encoding examples:
+##### Message Encoding Examples
 
-**`PeerInfo`**
+**PeerInfo**
 
-Decoded:
 ```json
 {
   "peer_info" {
@@ -169,7 +174,7 @@ len-prefix
 | `PeerInfo` | `PeerInfo` | Handshake and versioning exchange |
 | `SetState` | `StateRoot` | Initialize or reset target state |
 | `ImportBlock` | `StateRoot` | Process block and return resulting state root |
-| `GetState` | `State` | Retrieve full key-value state for comparison |
+| `GetState` | `State` | Retrieve posterior state associated to given header hash |
 
 #### Message Flow
 
@@ -177,40 +182,6 @@ The protocol follows a strict request-response pattern where:
 - The fuzzer always initiates requests
 - The target must respond to each request before the next request is sent
 - Responses are mandatory and must match the expected message type for each request
-
-**Typical Session Flow:**
-
-```
-Fuzzer (F)       Target (T)
-|    PeerInfo    |
-| -------------> |
-|    PeerInfo    |
-| <------------- |
-|                |
-|    SetState    |
-| -------------> | > Initialize target with genesis state
-|    StateRoot   | < Return state root
-| <------------- |
-|                |
-|   ImportBlock  |
-| -------------> | > Process block #1
-|    StateRoot   | < Return new state root
-| <------------- |
-|     ....       |
-|   ImportBlock  |
-| -------------> | > Process block #n
-|    StateRoot   | < Return new state root
-| <------------- |
-|                |
-| (on mismatch)  |
-|   GetState     | 
-| -------------> | > Request full state for comparison
-|     State      | < Return full state
-| <------------- |
-```
-
-##### Implemetation Notes:
-
 - State roots are compared after each block import to detect discrepancies
 - Full state retrieval via `GetState` is only performed when state root
   mismatches are detected
@@ -219,3 +190,33 @@ Fuzzer (F)       Target (T)
 - The fuzzing session is terminated by the fuzzer closing the connection.
   No explicit termination message is sent.
 
+**Typical Session Flow:**
+
+```
+             Fuzzer           Target
+                |    PeerInfo    |
+                | -------------> |
+                |    PeerInfo    |
+                | <------------- |
+                |                |
+                |    SetState    |
+                | -------------> | > Initialize target with genesis state
+                |    StateRoot   | < Return state root
+ Compare root < | <------------- |
+                |                |
+                |   ImportBlock  |
+                | -------------> | > Process block #1
+                |    StateRoot   | < Return new state root
+ Compare root < | <------------- |
+                |     ....       |
+                |   ImportBlock  |
+                | -------------> | > Process block #n
+                |    StateRoot   | < Return new state root
+ Compare root < | <------------- |
+                |                |
+                | (on mismatch)  |
+                |   GetState     | 
+                | -------------> | > Request full state for comparison
+                |     State      | < Return full state
+                | <------------- |
+```
