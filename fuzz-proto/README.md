@@ -193,30 +193,41 @@ The protocol follows a strict request-response pattern where:
 **Typical Session Flow:**
 
 ```
-             Fuzzer           Target
-                |    PeerInfo    |
-                | -------------> |
-                |    PeerInfo    |
-                | <------------- |
-                |                |
-                |    SetState    |
-                | -------------> | > Initialize target with genesis state
-                |    StateRoot   | < Return state root
- Compare root < | <------------- |
-                |                |
-                |   ImportBlock  |
-                | -------------> | > Process block #1
-                |    StateRoot   | < Return new state root
- Compare root < | <------------- |
-                |     ....       |
-                |   ImportBlock  |
-                | -------------> | > Process block #n
-                |    StateRoot   | < Return new state root
- Compare root < | <------------- |
-                |                |
-                | (on mismatch)  |
-                |   GetState     | 
-                | -------------> | > Request full state for comparison
-                |     State      | < Return full state
-                | <------------- |
+              Fuzzer                    Target
+                 |                         |
+             +---+--- HANDSHAKE -----------+---+
+             |   |      PeerInfo           |   |
+             |   | ----------------------> |   |
+             |   |      PeerInfo           |   |
+             |   | <---------------------- |   |
+             +---+-------------------------+---+
+                 |                         |
+             +---+--- INITIALIZATION ------+---+
+             |   |      SetState           |   |
+             |   | ----------------------> |   | Initialize state
+             |   |      StateRoot          |   |
+  Check root |   | <---------------------- |   | Return state root
+             +---+-------------------------+---+
+                 |                         |
+             +---+--- BLOCK PROCESSING ----+---+
+             |   |      ImportBlock        |   |
+             |   | ----------------------> |   | Process block #1
+             |   |      StateRoot          |   |
+  Check root |   | <---------------------- |   | Return new state root
+             |   |          ...            |   |
+             |   |                         |   |
+             |   |      ImportBlock        |   |
+             |   | ----------------------> |   | Process block #n
+             |   |      StateRoot          |   |
+             |   | <---------------------- |   | Return new state root
+             |   |          ...            |   |
+             +---+-------------------------+---+
+                 |                         |
+             +---+--- ON ROOT MISMATCH ----+---+
+             |   |      GetState           |   |
+             |   | ----------------------> |   | Request full state
+             |   |       State             |   |
+  Gen Report |   | <---------------------- |   | Return full state
+             +---+-------------------------+---+
+                 |                         |
 ```
