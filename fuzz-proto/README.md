@@ -29,7 +29,7 @@ The conformance testing process follows these steps:
    - **Inputs and Results**: Prior state, block, and the locally computed
      posterior state.
    - **Target Comparison**: If the target's posterior state is available,
-     generate a diff against the expected posterior state.  
+     a _diff_ relative to the expected posterior state.  
 
 The resulting report can be used to construct a precise, specialized test
 vector designed to immediately reproduce the discrepancy observed in the target
@@ -37,13 +37,14 @@ implementation.
 
 ### No Reference Implementation
 
-As there will never be a definitive reference implementation, and the Graypaper
-is the only authoritative specification, treating the local fuzzer engine as a
-reference is inaccurate. A mismatch between the fuzzer expectation and the
-target does not automatically imply a bug in the target.
+As there will never be a reference implementation, and the Graypaper is the only
+authoritative specification, treating the local fuzzer engine as a reference is
+thus inaccurate.
 
-In case of discrepancy, the resulting test vector must be examined and the
-expected behavior verified against the Graypaper to resolve the inconsistency.
+A mismatch between the fuzzer expectation and the target does not automatically
+imply an issue with the target. In case of discrepancy, the resulting test
+vector should be reviewed, and the expected behavior verified against the
+Graypaper to resolve the inconsistency.
 
 ### Communication Protocol
 
@@ -68,9 +69,9 @@ Version ::= SEQUENCE {
 }
 
 PeerInfo ::= SEQUENCE {
-    name             UTF8String,
-    version          Version,
-    protocol-version Version
+    name         UTF8String,
+    app-version  Version,
+    jam-version  Version
 }
 
 KeyValue ::= SEQUENCE {
@@ -101,7 +102,7 @@ Message ::= CHOICE {
 }
 ```
 
-**Note**: The `Header` included in the `SetState` message is eventually
+**Note**: The `Header` included in the `SetState` message may be eventually
 used - via its hash - to reference the associated state. It is conceptually
 similar to the genesis header: like the genesis header, its contents do not
 fully determine the state. In other words, the state must be accepted and
@@ -138,8 +139,7 @@ transmission, each encoded message is prefixed with its length, represented as a
 Encoded:
 ```
 0x0e000000 0x000666757a7a6572000117000606
-^          ^ encoded-message
-len-prefix
+^ length   ^ encoded-message
 ```
 
 **StateRoot**
@@ -153,8 +153,7 @@ len-prefix
 Encoded:
 ```
 0x21000000 0x054559342d3a32a8cbc3c46399a80753abff8bf785aa9d6f623e0de045ba6701fe
-^          ^ encoded-message
-len-prefix
+^ length   ^ encoded-message
 ```
 
 #### Connection Setup
