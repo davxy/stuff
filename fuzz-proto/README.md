@@ -83,7 +83,7 @@ State ::= SEQUENCE OF KeyValue
 
 ImportBlock ::= Block
 
-SetState ::= SEQUENCE {
+SetState ::= {
     header  Header,
     state   State
 }
