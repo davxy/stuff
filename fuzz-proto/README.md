@@ -88,7 +88,7 @@ SetState ::= SEQUENCE {
     state   State
 }
 
-GetState ::= HeaderHash
+GetState ::= State
 
 StateRoot ::= StateRootHash
 
